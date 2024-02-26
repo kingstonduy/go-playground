@@ -85,11 +85,11 @@ func (a *AwaitSignals) Listen(ctx workflow.Context) {
 
 // AwaitSignalsWorkflow workflow definition
 func AwaitSignalsWorkflow(ctx workflow.Context, transactionInfo string) (err error) {
-
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: 10 * time.Second,
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)
+
 	var a AwaitSignals
 
 	workflow.ExecuteActivity(ctx, Produce, "localhost:9092", "topic1", "Hello Kafka")

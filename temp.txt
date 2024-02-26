@@ -1,0 +1,8 @@
+listenSignal
+    addReceiver(signal name)
+
+workflow
+    execute(activity 1)
+    wait for signal1
+    execute(activity 2)
+    wait for signal2s

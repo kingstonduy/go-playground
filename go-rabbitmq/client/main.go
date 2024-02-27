@@ -12,8 +12,8 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func RequestAndReply(n int) (res string, err error) {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5673/")
+func RequestAndReply(topic string, url string, n int) (res string, err error) {
+	conn, err := amqp.Dial(url)
 	if err != nil {
 		log.Panicf("%s: Failed to connect to RabbitMQ", err)
 	}
@@ -56,10 +56,10 @@ func RequestAndReply(n int) (res string, err error) {
 	defer cancel()
 
 	err = ch.PublishWithContext(ctx,
-		"",          // exchange
-		"rpc_queue", // routing key
-		false,       // mandatory
-		false,       // immediate
+		"",    // exchange
+		topic, // routing key
+		false, // mandatory
+		false, // immediate
 		amqp.Publishing{
 			ContentType:   "text/plain",
 			CorrelationId: corrId,
@@ -86,12 +86,12 @@ func RequestAndReply(n int) (res string, err error) {
 func main() {
 	wg := sync.WaitGroup{}
 
-	for i := 1; i <= 1000; i++ {
+	for i := 1; i <= 100; i++ {
 		wg.Add(1)
 		go func() {
 			n := rand.Intn(20)
 			log.Printf(" [x] Requesting fib(%d)", n)
-			res, err := RequestAndReply(n)
+			res, err := RequestAndReply("rpc_queue11111", "amqp://guest:guest@localhost:5673/", n)
 			if err != nil {
 				log.Panicf("%s: Failed to handle RPC request", err)
 			}

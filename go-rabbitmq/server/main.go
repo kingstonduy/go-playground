@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"log"
-	"sync"
+	"math/rand"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -16,14 +16,12 @@ func failOnError(err error, msg string) {
 }
 
 func fib(n string) string {
+	// sleep for random 0-5 second
+	time.Sleep(time.Duration(rand.Intn(5)))
 	return "Hello" + n
 }
 
 func ConsumeAndPublish() {
-
-}
-
-func main() {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5673/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -60,35 +58,32 @@ func main() {
 	)
 	failOnError(err, "Failed to register a consumer")
 
-	wg := sync.WaitGroup{}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	for d := range msgs {
+		n := string(d.Body)
+		failOnError(err, "Failed to convert body to integer")
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		for d := range msgs {
-			n := string(d.Body)
-			failOnError(err, "Failed to convert body to integer")
+		log.Printf(" [.] fib(%s)", n)
 
-			log.Printf(" [.] fib(%s)", n)
+		response := fib(n)
+		err = ch.PublishWithContext(ctx,
+			"",        // exchange
+			d.ReplyTo, // routing key
+			false,     // mandatory
+			false,     // immediate
+			amqp.Publishing{
+				ContentType:   "text/plain",
+				CorrelationId: d.CorrelationId,
+				Body:          []byte(response),
+			})
+		failOnError(err, "Failed to publish a message")
 
-			response := fib(n)
-			err = ch.PublishWithContext(ctx,
-				"",        // exchange
-				d.ReplyTo, // routing key
-				false,     // mandatory
-				false,     // immediate
-				amqp.Publishing{
-					ContentType:   "text/plain",
-					CorrelationId: d.CorrelationId,
-					Body:          []byte(response),
-				})
-			failOnError(err, "Failed to publish a message")
+		d.Ack(false)
+		log.Printf(" [*] Awaiting RPC requests")
+	}
+}
 
-			d.Ack(false)
-		}
-	}()
-	log.Printf(" [*] Awaiting RPC requests")
-	wg.Wait()
+func main() {
+	ConsumeAndPublish()
 }

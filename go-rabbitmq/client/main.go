@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
@@ -71,7 +70,6 @@ func RequestAndReply(n int) (res string, err error) {
 		log.Panicf("%s: Failed to publish a message", err)
 	}
 
-	fmt.Println(len(msgs))
 	for d := range msgs {
 		if corrId == d.CorrelationId {
 			res = string(d.Body)
@@ -88,7 +86,7 @@ func RequestAndReply(n int) (res string, err error) {
 func main() {
 	wg := sync.WaitGroup{}
 
-	for i := 1; i <= 100; i++ {
+	for i := 1; i <= 1000; i++ {
 		wg.Add(1)
 		go func() {
 			n := rand.Intn(20)

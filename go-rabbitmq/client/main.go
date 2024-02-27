@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math/rand"
-	"strconv"
 	"sync"
 	"time"
 
@@ -12,7 +12,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func RequestAndReply(topic string, url string, n int) (res string, err error) {
+func RequestAndReply(topic string, url string, message string) (res string, err error) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		log.Panicf("%s: Failed to connect to RabbitMQ", err)
@@ -64,7 +64,7 @@ func RequestAndReply(topic string, url string, n int) (res string, err error) {
 			ContentType:   "text/plain",
 			CorrelationId: corrId,
 			ReplyTo:       q.Name,
-			Body:          []byte(strconv.Itoa(n)),
+			Body:          []byte(message),
 		})
 	if err != nil {
 		log.Panicf("%s: Failed to publish a message", err)
@@ -91,7 +91,7 @@ func main() {
 		go func() {
 			n := rand.Intn(20)
 			log.Printf(" [x] Requesting fib(%d)", n)
-			res, err := RequestAndReply("rpc_queue11111", "amqp://guest:guest@localhost:5673/", n)
+			res, err := RequestAndReply("rpc_queue11111", "amqp://guest:guest@localhost:5673/", fmt.Sprintf("%d", n))
 			if err != nil {
 				log.Panicf("%s: Failed to handle RPC request", err)
 			}

@@ -2,12 +2,22 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
+	"math/rand"
 	"sync"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
+
+type resquest struct {
+	Message string
+}
+
+type response struct {
+	Message string
+}
 
 func failOnError(err error, msg string) {
 	if err != nil {
@@ -15,10 +25,10 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func fib(n string) string {
+func fib(n resquest) response {
 	// sleep for random 0-5 second
-	// time.Sleep(time.Duration(rand.Intn(5)))
-	return "Hello" + n
+	time.Sleep(time.Duration(rand.Intn(20)))
+	return response{Message: "Hello, " + n.Message}
 }
 
 func ConsumeAndPublish(topic string, url string) {
@@ -40,7 +50,7 @@ func ConsumeAndPublish(topic string, url string) {
 	)
 	failOnError(err, "Failed to declare a queue")
 
-	concurrency := 100
+	concurrency := 10000
 	err = ch.Qos(
 		concurrency, // prefetch count
 		0,           // prefetch size
@@ -71,12 +81,17 @@ func ConsumeAndPublish(topic string, url string) {
 			defer wg.Done()
 			for d := range msgs {
 				log.Printf(" [*] Awaiting RPC requests")
-				n := string(d.Body)
-				failOnError(err, "Failed to convert body to integer")
 
-				log.Printf(" [.] fib(%s)", n)
+				var req resquest
+				var res response
 
-				response := fib(n)
+				_ = json.Unmarshal(d.Body, &req)
+
+				log.Printf(" [.] request %+v\n", req)
+
+				res = fib(req)
+				resJSON, _ := json.Marshal(res)
+
 				err = ch.PublishWithContext(ctx,
 					"",        // exchange
 					d.ReplyTo, // routing key
@@ -85,7 +100,7 @@ func ConsumeAndPublish(topic string, url string) {
 					amqp.Publishing{
 						ContentType:   "text/plain",
 						CorrelationId: d.CorrelationId,
-						Body:          []byte(response),
+						Body:          []byte(resJSON),
 					})
 				failOnError(err, "Failed to publish a message")
 

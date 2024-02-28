@@ -40,10 +40,11 @@ func ConsumeAndPublish(topic string, url string) {
 	)
 	failOnError(err, "Failed to declare a queue")
 
+	concurrency := 100
 	err = ch.Qos(
-		10,    // prefetch count
-		0,     // prefetch size
-		false, // global
+		concurrency, // prefetch count
+		0,           // prefetch size
+		false,       // global
 	)
 	failOnError(err, "Failed to set QoS")
 
@@ -62,7 +63,6 @@ func ConsumeAndPublish(topic string, url string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	concurrency := 100
 	var wg sync.WaitGroup // used to coordinate when they are done, ie: if rabbit conn was closed
 	wg.Add(concurrency)
 

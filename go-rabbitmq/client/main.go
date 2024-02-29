@@ -21,7 +21,7 @@ type response struct {
 	Message string
 }
 
-func RequestAndReply[T any, K any](req T, res *K, topic string, url string, conn *amqp.Connection) error {
+func RequestAndReply[T any, K any](req T, res *K, topic string, conn *amqp.Connection) error {
 	ch, err := conn.Channel()
 	if err != nil {
 		log.Panicf("%s: Failed to open a channel", err)
@@ -121,7 +121,7 @@ func main() {
 			request.Message = fmt.Sprintf("%d", rand.Intn(100000))
 			log.Printf(" [x] Request: %+v ", request)
 
-			err := RequestAndReply(request, &response, "rpc_queue11111", url, conn)
+			err := RequestAndReply(request, &response, "rpc_queue11111", conn)
 			if err != nil {
 				log.Panicf("%s: Failed to handle RPC request", err)
 			}

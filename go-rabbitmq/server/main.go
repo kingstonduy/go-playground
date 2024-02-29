@@ -31,11 +31,7 @@ func fib(n resquest) response {
 	return response{Message: "Hello, " + n.Message}
 }
 
-func ConsumeAndPublish(topic string, url string) {
-	conn, err := amqp.Dial(url)
-	failOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
-
+func ConsumeAndPublish(topic string, conn *amqp.Connection) {
 	ch, err := conn.Channel()
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
@@ -112,5 +108,9 @@ func ConsumeAndPublish(topic string, url string) {
 }
 
 func main() {
-	ConsumeAndPublish("rpc_queue11111", "amqp://guest:guest@localhost:5673/")
+	conn, err := amqp.Dial("amqp://guest:guest@localhost:5673/")
+	failOnError(err, "Failed to connect to RabbitMQ")
+	defer conn.Close()
+
+	ConsumeAndPublish("rpc_queue11111", conn)
 }

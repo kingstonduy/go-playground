@@ -13,7 +13,7 @@ import (
 func Produce() {
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
-	producer, err := sarama.NewAsyncProducer([]string{"10.96.24.141:9093"}, config)
+	producer, err := sarama.NewAsyncProducer([]string{"localhost:9092"}, config)
 	if err != nil {
 		panic(err)
 	}
@@ -67,4 +67,50 @@ ProducerLoop:
 	wg.Wait()
 
 	log.Printf("Successfully produced: %d; errors: %d\n", successes, producerErrors)
+}
+
+func Consume() {
+	consumer, err := sarama.NewConsumer([]string{"localhost:9092"}, sarama.NewConfig())
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		if err := consumer.Close(); err != nil {
+			log.Fatalln(err)
+		}
+	}()
+
+	partitionConsumer, err := consumer.ConsumePartition("test-duydk3", 0, sarama.OffsetNewest)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		if err := partitionConsumer.Close(); err != nil {
+			log.Fatalln(err)
+		}
+	}()
+
+	// Trap SIGINT to trigger a shutdown.
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt)
+
+	consumed := 0
+ConsumerLoop:
+	for {
+		select {
+		case msg := <-partitionConsumer.Messages():
+			log.Printf("Consumed message offset %d\n", msg.Offset)
+			consumed++
+		case <-signals:
+			break ConsumerLoop
+		}
+	}
+
+	log.Printf("Consumed: %d\n", consumed)
+}
+
+func main() {
+	Consume()
 }
